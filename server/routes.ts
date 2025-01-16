@@ -12,17 +12,30 @@ export function registerRoutes(app: Express): Server {
     try {
       const adminToken = nanoid();
       const guestToken = nanoid();
-      
+
+      const { parentEmail, childName, ageTurning, eventDate, description, interests } = req.body;
+
+      // Validate required fields
+      if (!parentEmail || !childName || !ageTurning || !eventDate || !description || !interests) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
       const event = await db.insert(events).values({
-        ...req.body,
+        parentEmail,
+        childName,
+        ageTurning: parseInt(ageTurning, 10),
+        eventDate: new Date(eventDate),
+        description,
+        interests,
         adminToken,
         guestToken,
       }).returning();
 
       // TODO: Send email with admin and guest links
 
-      res.json({ adminToken, guestToken });
+      res.json({ adminToken });
     } catch (error) {
+      console.error("Event creation error:", error);
       res.status(500).json({ error: "Failed to create event" });
     }
   });
@@ -33,11 +46,11 @@ export function registerRoutes(app: Express): Server {
       const event = await db.query.events.findFirst({
         where: eq(events.guestToken, req.params.token),
       });
-      
+
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
-      
+
       res.json(event);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch event" });
@@ -50,11 +63,11 @@ export function registerRoutes(app: Express): Server {
       const event = await db.query.events.findFirst({
         where: eq(events.adminToken, req.params.token),
       });
-      
+
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
-      
+
       res.json(event);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch event" });
@@ -67,11 +80,11 @@ export function registerRoutes(app: Express): Server {
       const event = await db.query.events.findFirst({
         where: eq(events.guestToken, req.params.token),
       });
-      
+
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
-      
+
       const count = await db.select().from(rsvps).where(eq(rsvps.eventId, event.id));
       res.json(count.length);
     } catch (error) {
@@ -85,11 +98,11 @@ export function registerRoutes(app: Express): Server {
       const event = await db.query.events.findFirst({
         where: eq(events.guestToken, req.params.token),
       });
-      
+
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
-      
+
       await db.insert(rsvps).values({
         eventId: event.id,
         parentEmail: req.body.parentEmail,
@@ -118,11 +131,11 @@ export function registerRoutes(app: Express): Server {
       const event = await db.query.events.findFirst({
         where: eq(events.adminToken, req.params.token),
       });
-      
+
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
-      
+
       const eventRsvps = await db.select().from(rsvps).where(eq(rsvps.eventId, event.id));
       res.json(eventRsvps);
     } catch (error) {
@@ -136,11 +149,11 @@ export function registerRoutes(app: Express): Server {
       const event = await db.query.events.findFirst({
         where: eq(events.adminToken, req.params.token),
       });
-      
+
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
-      
+
       await db.delete(events).where(eq(events.id, event.id));
       res.json({ success: true });
     } catch (error) {
