@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,11 +48,11 @@ export default function Event({ params }: { params: { token: string }}) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to RSVP");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -64,11 +64,11 @@ export default function Event({ params }: { params: { token: string }}) {
   });
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
   if (!event) {
-    return <div>Event not found</div>;
+    return <div className="min-h-screen flex items-center justify-center">Event not found</div>;
   }
 
   const giftSuggestions = event.interests.flatMap(
@@ -76,58 +76,61 @@ export default function Event({ params }: { params: { token: string }}) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-100 to-purple-100 p-4">
-      <div className="max-w-4xl mx-auto">
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle className="text-3xl text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              {event.childName}'s {event.ageTurning}th Birthday Party!
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="text-center text-lg">
-              <p className="font-semibold">
-                {format(new Date(event.eventDate), "EEEE, MMMM do 'at' h:mm a")}
-              </p>
-              <p className="mt-2">{event.description}</p>
-              <p className="mt-4 text-sm text-muted-foreground">
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-2xl mx-auto pt-16">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
+            {event.childName}'s {event.ageTurning}th Birthday!
+          </h1>
+          <p className="text-gray-600">
+            {format(new Date(event.eventDate), "EEEE, MMMM do 'at' h:mm a")}
+          </p>
+        </div>
+
+        <Card className="bg-white shadow-sm mb-8">
+          <CardContent className="pt-6">
+            <div className="prose max-w-none mb-6">
+              <p className="text-gray-700">{event.description}</p>
+              <p className="text-sm text-gray-500 mt-4">
                 Current RSVPs: {rsvpCount || 0} guest(s)
               </p>
             </div>
 
             <form onSubmit={handleSubmit((data) => rsvpMutation.mutate(data))} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="parentEmail">Your Email</Label>
+                <Label htmlFor="parentEmail" className="text-sm font-medium text-gray-700">Your Email</Label>
                 <Input
                   id="parentEmail"
                   type="email"
+                  className="w-full"
                   {...register("parentEmail", { required: true })}
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={rsvpMutation.isPending}
               >
                 {rsvpMutation.isPending ? "Confirming..." : "Confirm RSVP"}
               </Button>
             </form>
-
-            <div className="mt-8">
-              <h3 className="text-xl font-semibold mb-4">Gift Suggestions</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {giftSuggestions.map((gift, index) => (
-                  <Card key={index}>
-                    <CardContent className="p-4 text-center">
-                      {gift}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
           </CardContent>
         </Card>
+
+        <div className="bg-white shadow-sm rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Gift Suggestions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {giftSuggestions.map((gift, index) => (
+              <div
+                key={index}
+                className="p-4 bg-gray-50 rounded-lg text-center text-gray-700"
+              >
+                {gift}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
