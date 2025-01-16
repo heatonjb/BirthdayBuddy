@@ -40,6 +40,44 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Update event
+  app.put("/api/events/:token/admin", async (req, res) => {
+    try {
+      const event = await db.query.events.findFirst({
+        where: eq(events.adminToken, req.params.token),
+      });
+
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+
+      const { parentEmail, childName, ageTurning, eventDate, description, interests } = req.body;
+
+      // Validate required fields
+      if (!parentEmail || !childName || !ageTurning || !eventDate || !description || !interests) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const updatedEvent = await db
+        .update(events)
+        .set({
+          parentEmail,
+          childName,
+          ageTurning: parseInt(ageTurning, 10),
+          eventDate: new Date(eventDate),
+          description,
+          interests,
+        })
+        .where(eq(events.id, event.id))
+        .returning();
+
+      res.json(updatedEvent[0]);
+    } catch (error) {
+      console.error("Event update error:", error);
+      res.status(500).json({ error: "Failed to update event" });
+    }
+  });
+
   // Get event by guest token
   app.get("/api/events/:token", async (req, res) => {
     try {
