@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { db } from "@db";
 import { events, rsvps } from "@db/schema";
 import { nanoid } from "nanoid";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { generateICS } from "../client/src/lib/calendar";
 import { sendEmail, generateEventCreationEmail, generateRSVPConfirmationEmail } from "./lib/email";
 
@@ -146,6 +146,28 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get RSVPs for guest view
+  app.get("/api/events/:token/rsvps", async (req, res) => {
+    try {
+      const event = await db.query.events.findFirst({
+        where: eq(events.guestToken, req.params.token),
+      });
+
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+
+      const eventRsvps = await db.select({
+        id: rsvps.id,
+        childName: rsvps.childName,
+      }).from(rsvps).where(eq(rsvps.eventId, event.id));
+
+      res.json(eventRsvps);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch RSVPs" });
+    }
+  });
+
   // Submit RSVP
   app.post("/api/events/:token/rsvp", async (req, res) => {
     try {
@@ -155,6 +177,21 @@ export function registerRoutes(app: Express): Server {
 
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
+      }
+
+      // Check for duplicate RSVP
+      const existingRSVP = await db.query.rsvps.findFirst({
+        where: and(
+          eq(rsvps.eventId, event.id),
+          eq(rsvps.parentEmail, req.body.parentEmail),
+          eq(rsvps.childName, req.body.childName)
+        ),
+      });
+
+      if (existingRSVP) {
+        return res.status(400).json({
+          message: "A child with this name has already been RSVP'd from this email address"
+        });
       }
 
       await db.insert(rsvps).values({

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ const MONTHS = [
 export default function Event({ params }: { params: { token: string }}) {
   const { toast } = useToast();
   const { token } = params;
+  const [rsvpSuccess, setRsvpSuccess] = useState(false);
 
   const { data: event, isLoading } = useQuery({
     queryKey: [`/api/events/${token}`],
@@ -40,7 +41,12 @@ export default function Event({ params }: { params: { token: string }}) {
     enabled: !!event,
   });
 
-  const { register, handleSubmit, setValue, watch } = useForm({
+  const { data: rsvpList } = useQuery({
+    queryKey: [`/api/events/${token}/rsvps`],
+    enabled: !!event,
+  });
+
+  const { register, handleSubmit, setValue, watch, setError, formState: { errors } } = useForm({
     defaultValues: {
       parentEmail: "",
       childName: "",
@@ -58,7 +64,8 @@ export default function Event({ params }: { params: { token: string }}) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to RSVP");
+        const error = await response.json();
+        throw new Error(error.message || "Failed to RSVP");
       }
 
       return response.json();
@@ -68,6 +75,21 @@ export default function Event({ params }: { params: { token: string }}) {
         title: "RSVP Confirmed!",
         description: "Check your email for the calendar invite.",
       });
+      setRsvpSuccess(true);
+    },
+    onError: (error: Error) => {
+      if (error.message.includes("duplicate")) {
+        setError("childName", {
+          type: "manual",
+          message: "This child has already been RSVP'd to this event"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -82,6 +104,30 @@ export default function Event({ params }: { params: { token: string }}) {
   const giftSuggestions = event.interests.flatMap(
     (interest: string) => GIFT_SUGGESTIONS[interest] || []
   );
+
+  if (rsvpSuccess) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-2xl mx-auto pt-16">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="pt-6 text-center">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">Thank You for RSVPing!</h2>
+              <p className="text-gray-600 mb-6">
+                We've sent you a confirmation email with a calendar invite.
+                Looking forward to celebrating with you!
+              </p>
+              <Button
+                onClick={() => setRsvpSuccess(false)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Return to Event Page
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -99,9 +145,21 @@ export default function Event({ params }: { params: { token: string }}) {
           <CardContent className="pt-6">
             <div className="prose max-w-none mb-6">
               <p className="text-gray-700">{event.description}</p>
-              <p className="text-sm text-gray-500 mt-4">
-                Current RSVPs: {rsvpCount || 0} guest(s)
-              </p>
+              <div className="mt-6 border-t pt-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Who's Coming?</h3>
+                {rsvpList?.length > 0 ? (
+                  <ul className="list-disc pl-5 text-gray-600">
+                    {rsvpList.map((rsvp: any) => (
+                      <li key={rsvp.id}>{rsvp.childName}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 italic">Be the first to RSVP!</p>
+                )}
+                <p className="text-sm text-gray-500 mt-2">
+                  Total RSVPs: {rsvpCount || 0} guest(s)
+                </p>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit((data) => rsvpMutation.mutate(data))} className="space-y-4">
@@ -123,6 +181,9 @@ export default function Event({ params }: { params: { token: string }}) {
                   className="w-full"
                   {...register("childName", { required: true })}
                 />
+                {errors.childName && (
+                  <p className="text-sm text-red-500">{errors.childName.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
