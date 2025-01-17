@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { sendEmail } from "@/lib/email";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -165,6 +166,28 @@ export default function Home() {
                 {createEvent.isPending ? "Creating..." : "Create Birthday Event"}
               </Button>
             </form>
+
+            {/* Debug Section */}
+            {window.location.search.includes('admintest=true') && (
+              <div className="mt-6 p-4 border-t">
+                <h3 className="text-lg font-semibold mb-4">Debug Options</h3>
+                <div className="space-y-4">
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      const result = await sendEmail({
+                        to: "test@example.com",
+                        subject: "Test Email",
+                        html: "<h1>Test Email</h1><p>This is a test email from the debug panel.</p>"
+                      });
+                      alert(result ? "Email sent successfully" : "Email failed to send");
+                    }}
+                  >
+                    Test Send Email
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
