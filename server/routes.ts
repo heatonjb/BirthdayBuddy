@@ -5,6 +5,7 @@ import { events, rsvps } from "@db/schema";
 import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { generateICS } from "../client/src/lib/calendar";
+import { sendEmail, generateEventCreationEmail, generateRSVPConfirmationEmail } from "./lib/email";
 
 export function registerRoutes(app: Express): Server {
   // Create new event
@@ -31,7 +32,22 @@ export function registerRoutes(app: Express): Server {
         guestToken,
       }).returning();
 
-      // TODO: Send email with admin and guest links
+      // Send confirmation email with admin and guest links
+      const adminUrl = `${req.protocol}://${req.get('host')}/admin/${adminToken}`;
+      const rsvpUrl = `${req.protocol}://${req.get('host')}/event/${guestToken}`;
+
+      await sendEmail({
+        to: parentEmail,
+        subject: `Birthday Event Created for ${childName}`,
+        html: generateEventCreationEmail({
+          adminUrl,
+          rsvpUrl,
+          childName,
+          ageTurning: parseInt(ageTurning, 10),
+          eventDate: new Date(eventDate),
+          description,
+        }),
+      });
 
       res.json({ adminToken });
     } catch (error) {
@@ -144,6 +160,9 @@ export function registerRoutes(app: Express): Server {
       await db.insert(rsvps).values({
         eventId: event.id,
         parentEmail: req.body.parentEmail,
+        childName: req.body.childName,
+        childBirthMonth: req.body.childBirthMonth,
+        receiveUpdates: req.body.receiveUpdates,
         attending: true,
       });
 
@@ -155,10 +174,41 @@ export function registerRoutes(app: Express): Server {
         description: event.description,
       });
 
-      // TODO: Send confirmation email with calendar attachment
+      // Send confirmation email with calendar attachment
+      await sendEmail({
+        to: req.body.parentEmail,
+        subject: `RSVP Confirmed - ${event.childName}'s Birthday Party`,
+        html: generateRSVPConfirmationEmail({
+          eventName: `${event.childName}'s ${event.ageTurning}th Birthday Party`,
+          eventDate: new Date(event.eventDate),
+          description: event.description,
+        }),
+        attachments: [{
+          filename: 'event.ics',
+          content: Buffer.from(calendar).toString('base64'),
+          type: 'text/calendar',
+        }],
+      });
+
+      // If receiveUpdates is true and it's the event creator's email, also send admin notifications
+      if (req.body.receiveUpdates && event.parentEmail === req.body.parentEmail) {
+        await sendEmail({
+          to: event.parentEmail,
+          subject: `New RSVP for ${event.childName}'s Birthday Party`,
+          html: `
+            <h1>New RSVP Received!</h1>
+            <p>A new guest has RSVP'd to your event.</p>
+            <p><strong>Guest:</strong> ${req.body.parentEmail}</p>
+            <p><strong>Child:</strong> ${req.body.childName}</p>
+            <p><strong>Birth Month:</strong> ${req.body.childBirthMonth}</p>
+            <p>View all RSVPs on your <a href="${req.protocol}://${req.get('host')}/admin/${event.adminToken}">admin page</a>.</p>
+          `,
+        });
+      }
 
       res.json({ success: true });
     } catch (error) {
+      console.error("RSVP error:", error);
       res.status(500).json({ error: "Failed to submit RSVP" });
     }
   });
