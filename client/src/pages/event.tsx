@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
@@ -21,6 +22,11 @@ const GIFT_SUGGESTIONS: Record<string, string[]> = {
   "Building & Construction": ["Building blocks", "Construction set", "Robot kit"],
 };
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
 export default function Event({ params }: { params: { token: string }}) {
   const { toast } = useToast();
   const { token } = params;
@@ -34,10 +40,12 @@ export default function Event({ params }: { params: { token: string }}) {
     enabled: !!event,
   });
 
-  const { register, handleSubmit } = useForm({
+  const { register, handleSubmit, setValue, watch } = useForm({
     defaultValues: {
       parentEmail: "",
-      attending: "yes",
+      childName: "",
+      childBirthMonth: "",
+      receiveUpdates: true,
     }
   });
 
@@ -105,6 +113,46 @@ export default function Event({ params }: { params: { token: string }}) {
                   className="w-full"
                   {...register("parentEmail", { required: true })}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="childName" className="text-sm font-medium text-gray-700">Child's Name</Label>
+                <Input
+                  id="childName"
+                  type="text"
+                  className="w-full"
+                  {...register("childName", { required: true })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="childBirthMonth" className="text-sm font-medium text-gray-700">Child's Birth Month</Label>
+                <select
+                  id="childBirthMonth"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  {...register("childBirthMonth", { required: true })}
+                >
+                  <option value="">Select month</option>
+                  {MONTHS.map((month) => (
+                    <option key={month} value={month}>
+                      {month}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="receiveUpdates"
+                  checked={watch("receiveUpdates")}
+                  onCheckedChange={(checked) => setValue("receiveUpdates", checked)}
+                />
+                <Label
+                  htmlFor="receiveUpdates"
+                  className="text-sm text-gray-600 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Receive event reminders and updates
+                </Label>
               </div>
 
               <Button

@@ -19,6 +19,9 @@ export const rsvps = pgTable("rsvps", {
   id: serial("id").primaryKey(),
   eventId: integer("event_id").references(() => events.id).notNull(),
   parentEmail: text("parent_email").notNull(),
+  childName: text("child_name").notNull(),
+  childBirthMonth: text("child_birth_month").notNull(),
+  receiveUpdates: boolean("receive_updates").default(true).notNull(),
   attending: boolean("attending").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
