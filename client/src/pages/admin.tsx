@@ -166,7 +166,7 @@ export default function Admin({ params }: { params: { token: string }}) {
                             ...formData,
                             interests: formData.interests.includes(interest)
                               ? formData.interests.filter((i: string) => i !== interest)
-                              : [...formData.interests, interest]
+                              : [...formData.interests, interest],
                           });
                         }}
                       >
@@ -216,12 +216,38 @@ export default function Admin({ params }: { params: { token: string }}) {
                 </div>
 
                 <div className="space-y-2">
-                  <h2 className="text-xl font-semibold">Share Links</h2>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">RSVP Link (share with guests):</p>
-                    <code className="block p-2 bg-muted rounded">
-                      {window.location.origin}/event/{event.guestToken}
-                    </code>
+                  <h2 className="text-xl font-semibold text-gray-900">Share Links</h2>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">RSVP Link (share with guests)</p>
+                      <div className="flex flex-col gap-2">
+                        <code className="block p-2 bg-gray-50 rounded text-sm break-all">
+                          {window.location.origin}/event/{event.guestToken}
+                        </code>
+                        <a
+                          href={`${window.location.origin}/event/${event.guestToken}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 text-sm inline-flex items-center gap-1"
+                        >
+                          Open RSVP page
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
+                          </svg>
+                        </a>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
